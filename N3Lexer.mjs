@@ -1,6 +1,6 @@
 // **N3Lexer** tokenizes N3 documents.
-import namespaces from './IRIs';
-import queueMicrotask from 'queue-microtask';
+import namespaces from './IRIs.mjs'
+import queueMicrotask from './queue-microtask.mjs'
 
 const { xsd } = namespaces;
 
@@ -111,84 +111,67 @@ export default class N3Lexer {
       // Look for specific token types based on the first character
       const line = this._line, firstChar = input[0];
       let type = '', value = '', prefix = '',
-          match = null, matchLength = 0, inconclusive = false;
+        match = null, matchLength = 0, inconclusive = false;
       switch (firstChar) {
-      case '^':
-        // We need at least 3 tokens lookahead to distinguish ^^<IRI> and ^^pre:fixed
-        if (input.length < 3)
-          break;
-        // Try to match a type
-        else if (input[1] === '^') {
-          this._previousMarker = '^^';
-          // Move to type IRI or prefixed name
-          input = input.substr(2);
-          if (input[0] !== '<') {
-            inconclusive = true;
+        case '^':
+          // We need at least 3 tokens lookahead to distinguish ^^<IRI> and ^^pre:fixed
+          if (input.length < 3)
+            break;
+          // Try to match a type
+          else if (input[1] === '^') {
+            this._previousMarker = '^^';
+            // Move to type IRI or prefixed name
+            input = input.substr(2);
+            if (input[0] !== '<') {
+              inconclusive = true;
+              break;
+            }
+          }
+          // If no type, it must be a path expression
+          else {
+            if (this._n3Mode) {
+              matchLength = 1;
+              type = '^';
+            }
             break;
           }
-        }
-        // If no type, it must be a path expression
-        else {
-          if (this._n3Mode) {
-            matchLength = 1;
-            type = '^';
-          }
-          break;
-        }
         // Fall through in case the type is an IRI
-      case '<':
-        // Try to find a full IRI without escape sequences
-        if (match = this._unescapedIri.exec(input))
-          type = 'IRI', value = match[1];
-        // Try to find a full IRI with escape sequences
-        else if (match = this._iri.exec(input)) {
-          value = this._unescape(match[1]);
-          if (value === null || illegalIriChars.test(value))
-            return reportSyntaxError(this);
-          type = 'IRI';
-        }
-        // Try to find a nested triple
-        else if (input.length > 1 && input[1] === '<')
-          type = '<<', matchLength = 2;
-        // Try to find a backwards implication arrow
-        else if (this._n3Mode && input.length > 1 && input[1] === '=')
-          type = 'inverse', matchLength = 2, value = '>';
-        break;
+        case '<':
+          // Try to find a full IRI without escape sequences
+          if (match = this._unescapedIri.exec(input))
+            type = 'IRI', value = match[1];
+          // Try to find a full IRI with escape sequences
+          else if (match = this._iri.exec(input)) {
+            value = this._unescape(match[1]);
+            if (value === null || illegalIriChars.test(value))
+              return reportSyntaxError(this);
+            type = 'IRI';
+          }
+          // Try to find a nested triple
+          else if (input.length > 1 && input[1] === '<')
+            type = '<<', matchLength = 2;
+          // Try to find a backwards implication arrow
+          else if (this._n3Mode && input.length > 1 && input[1] === '=')
+            type = 'inverse', matchLength = 2, value = '>';
+          break;
 
-      case '>':
-        if (input.length > 1 && input[1] === '>')
-          type = '>>', matchLength = 2;
-        break;
+        case '>':
+          if (input.length > 1 && input[1] === '>')
+            type = '>>', matchLength = 2;
+          break;
 
-      case '_':
-        // Try to find a blank node. Since it can contain (but not end with) a dot,
-        // we always need a non-dot character before deciding it is a blank node.
-        // Therefore, try inserting a space if we're at the end of the input.
-        if ((match = this._blank.exec(input)) ||
+        case '_':
+          // Try to find a blank node. Since it can contain (but not end with) a dot,
+          // we always need a non-dot character before deciding it is a blank node.
+          // Therefore, try inserting a space if we're at the end of the input.
+          if ((match = this._blank.exec(input)) ||
             inputFinished && (match = this._blank.exec(`${input} `)))
-          type = 'blank', prefix = '_', value = match[1];
-        break;
+            type = 'blank', prefix = '_', value = match[1];
+          break;
 
-      case '"':
-        // Try to find a literal without escape sequences
-        if (match = this._simpleQuotedString.exec(input))
-          value = match[1];
-        // Try to find a literal wrapped in three pairs of quotes
-        else {
-          ({ value, matchLength } = this._parseLiteral(input));
-          if (value === null)
-            return reportSyntaxError(this);
-        }
-        if (match !== null || matchLength !== 0) {
-          type = 'literal';
-          this._literalClosingPos = 0;
-        }
-        break;
-
-      case "'":
-        if (!this._lineMode) {
+        case '"':
           // Try to find a literal without escape sequences
-          if (match = this._simpleApostropheString.exec(input))
+          if (match = this._simpleQuotedString.exec(input))
             value = match[1];
           // Try to find a literal wrapped in three pairs of quotes
           else {
@@ -200,153 +183,170 @@ export default class N3Lexer {
             type = 'literal';
             this._literalClosingPos = 0;
           }
-        }
-        break;
-
-      case '?':
-        // Try to find a variable
-        if (this._n3Mode && (match = this._variable.exec(input)))
-          type = 'var', value = match[0];
-        break;
-
-      case '@':
-        // Try to find a language code
-        if (this._previousMarker === 'literal' && (match = this._langcode.exec(input)))
-          type = 'langcode', value = match[1];
-        // Try to find a keyword
-        else if (match = this._keyword.exec(input))
-          type = match[0];
-        break;
-
-      case '.':
-        // Try to find a dot as punctuation
-        if (input.length === 1 ? inputFinished : (input[1] < '0' || input[1] > '9')) {
-          type = '.';
-          matchLength = 1;
           break;
-        }
+
+        case "'":
+          if (!this._lineMode) {
+            // Try to find a literal without escape sequences
+            if (match = this._simpleApostropheString.exec(input))
+              value = match[1];
+            // Try to find a literal wrapped in three pairs of quotes
+            else {
+              ({ value, matchLength } = this._parseLiteral(input));
+              if (value === null)
+                return reportSyntaxError(this);
+            }
+            if (match !== null || matchLength !== 0) {
+              type = 'literal';
+              this._literalClosingPos = 0;
+            }
+          }
+          break;
+
+        case '?':
+          // Try to find a variable
+          if (this._n3Mode && (match = this._variable.exec(input)))
+            type = 'var', value = match[0];
+          break;
+
+        case '@':
+          // Try to find a language code
+          if (this._previousMarker === 'literal' && (match = this._langcode.exec(input)))
+            type = 'langcode', value = match[1];
+          // Try to find a keyword
+          else if (match = this._keyword.exec(input))
+            type = match[0];
+          break;
+
+        case '.':
+          // Try to find a dot as punctuation
+          if (input.length === 1 ? inputFinished : (input[1] < '0' || input[1] > '9')) {
+            type = '.';
+            matchLength = 1;
+            break;
+          }
         // Fall through to numerical case (could be a decimal dot)
 
-      case '0':
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
-      case '+':
-      case '-':
-        // Try to find a number. Since it can contain (but not end with) a dot,
-        // we always need a non-dot character before deciding it is a number.
-        // Therefore, try inserting a space if we're at the end of the input.
-        if (match = this._number.exec(input) ||
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        case '+':
+        case '-':
+          // Try to find a number. Since it can contain (but not end with) a dot,
+          // we always need a non-dot character before deciding it is a number.
+          // Therefore, try inserting a space if we're at the end of the input.
+          if (match = this._number.exec(input) ||
             inputFinished && (match = this._number.exec(`${input} `))) {
-          type = 'literal', value = match[0];
-          prefix = (typeof match[1] === 'string' ? xsd.double :
-                    (typeof match[2] === 'string' ? xsd.decimal : xsd.integer));
-        }
-        break;
-
-      case 'B':
-      case 'b':
-      case 'p':
-      case 'P':
-      case 'G':
-      case 'g':
-        // Try to find a SPARQL-style keyword
-        if (match = this._sparqlKeyword.exec(input))
-          type = match[0].toUpperCase();
-        else
-          inconclusive = true;
-        break;
-
-      case 'f':
-      case 't':
-        // Try to match a boolean
-        if (match = this._boolean.exec(input))
-          type = 'literal', value = match[0], prefix = xsd.boolean;
-        else
-          inconclusive = true;
-        break;
-
-      case 'a':
-        // Try to find an abbreviated predicate
-        if (match = this._shortPredicates.exec(input))
-          type = 'abbreviation', value = 'a';
-        else
-          inconclusive = true;
-        break;
-
-      case '=':
-        // Try to find an implication arrow or equals sign
-        if (this._n3Mode && input.length > 1) {
-          type = 'abbreviation';
-          if (input[1] !== '>')
-            matchLength = 1, value = '=';
-          else
-            matchLength = 2, value = '>';
-        }
-        break;
-
-      case '!':
-        if (!this._n3Mode)
+            type = 'literal', value = match[0];
+            prefix = (typeof match[1] === 'string' ? xsd.double :
+              (typeof match[2] === 'string' ? xsd.decimal : xsd.integer));
+          }
           break;
-      case ',':
-      case ';':
-      case '[':
-      case ']':
-      case '(':
-      case ')':
-      case '}':
-        if (!this._lineMode) {
-          matchLength = 1;
-          type = firstChar;
-        }
-        break;
-      case '{':
-        // We need at least 2 tokens lookahead to distinguish "{|" and "{ "
-        if (!this._lineMode && input.length >= 2) {
-          // Try to find a quoted triple annotation start
-          if (input[1] === '|')
-            type = '{|', matchLength = 2;
-          else
-            type = firstChar, matchLength = 1;
-        }
-        break;
-      case '|':
-        // We need 2 tokens lookahead to parse "|}"
-        // Try to find a quoted triple annotation end
-        if (input.length >= 2 && input[1] === '}')
-          type = '|}', matchLength = 2;
-        break;
 
-      default:
-        inconclusive = true;
+        case 'B':
+        case 'b':
+        case 'p':
+        case 'P':
+        case 'G':
+        case 'g':
+          // Try to find a SPARQL-style keyword
+          if (match = this._sparqlKeyword.exec(input))
+            type = match[0].toUpperCase();
+          else
+            inconclusive = true;
+          break;
+
+        case 'f':
+        case 't':
+          // Try to match a boolean
+          if (match = this._boolean.exec(input))
+            type = 'literal', value = match[0], prefix = xsd.boolean;
+          else
+            inconclusive = true;
+          break;
+
+        case 'a':
+          // Try to find an abbreviated predicate
+          if (match = this._shortPredicates.exec(input))
+            type = 'abbreviation', value = 'a';
+          else
+            inconclusive = true;
+          break;
+
+        case '=':
+          // Try to find an implication arrow or equals sign
+          if (this._n3Mode && input.length > 1) {
+            type = 'abbreviation';
+            if (input[1] !== '>')
+              matchLength = 1, value = '=';
+            else
+              matchLength = 2, value = '>';
+          }
+          break;
+
+        case '!':
+          if (!this._n3Mode)
+            break;
+        case ',':
+        case ';':
+        case '[':
+        case ']':
+        case '(':
+        case ')':
+        case '}':
+          if (!this._lineMode) {
+            matchLength = 1;
+            type = firstChar;
+          }
+          break;
+        case '{':
+          // We need at least 2 tokens lookahead to distinguish "{|" and "{ "
+          if (!this._lineMode && input.length >= 2) {
+            // Try to find a quoted triple annotation start
+            if (input[1] === '|')
+              type = '{|', matchLength = 2;
+            else
+              type = firstChar, matchLength = 1;
+          }
+          break;
+        case '|':
+          // We need 2 tokens lookahead to parse "|}"
+          // Try to find a quoted triple annotation end
+          if (input.length >= 2 && input[1] === '}')
+            type = '|}', matchLength = 2;
+          break;
+
+        default:
+          inconclusive = true;
       }
 
       // Some first characters do not allow an immediate decision, so inspect more
       if (inconclusive) {
         // Try to find a prefix
         if ((this._previousMarker === '@prefix' || this._previousMarker === 'PREFIX') &&
-            (match = this._prefix.exec(input)))
+          (match = this._prefix.exec(input)))
           type = 'prefix', value = match[1] || '';
         // Try to find a prefixed name. Since it can contain (but not end with) a dot,
         // we always need a non-dot character before deciding it is a prefixed name.
         // Therefore, try inserting a space if we're at the end of the input.
         else if ((match = this._prefixed.exec(input)) ||
-                 inputFinished && (match = this._prefixed.exec(`${input} `)))
+          inputFinished && (match = this._prefixed.exec(`${input} `)))
           type = 'prefixed', prefix = match[1] || '', value = this._unescape(match[2]);
       }
 
       // A type token is special: it can only be emitted after an IRI or prefixed name is read
       if (this._previousMarker === '^^') {
         switch (type) {
-        case 'prefixed': type = 'type';    break;
-        case 'IRI':      type = 'typeIRI'; break;
-        default:         type = '';
+          case 'prefixed': type = 'type'; break;
+          case 'IRI': type = 'typeIRI'; break;
+          default: type = '';
         }
       }
 
@@ -431,7 +431,7 @@ export default class N3Lexer {
           const matchLength = closingPos + openingLength;
           // Only triple-quoted strings can be multi-line
           if (openingLength === 1 && lines !== 0 ||
-              openingLength === 3 && this._lineMode)
+            openingLength === 3 && this._lineMode)
             break;
           this._line += lines;
           return { value: this._unescape(raw), matchLength };

@@ -1,6 +1,6 @@
 // **N3StreamWriter** serializes a quad stream into a text stream.
-import { Transform } from 'readable-stream';
-import N3Writer from './N3Writer';
+import { Transform } from 'https://esm.sh/readable-stream@4.5.2'
+import N3Writer from './N3Writer.mjs'
 
 // ## Constructor
 export default class N3StreamWriter extends Transform {
@@ -18,11 +18,11 @@ export default class N3StreamWriter extends Transform {
     this._flush = done => { writer.end(done); };
   }
 
-// ### Serializes a stream of quads
+  // ### Serializes a stream of quads
   import(stream) {
-    stream.on('data',   quad => { this.write(quad); });
-    stream.on('end',    () => { this.end(); });
-    stream.on('error',  error => { this.emit('error', error); });
+    stream.on('data', quad => { this.write(quad); });
+    stream.on('end', () => { this.end(); });
+    stream.on('error', error => { this.emit('error', error); });
     stream.on('prefix', (prefix, iri) => { this._writer.addPrefix(prefix, iri); });
     return this;
   }

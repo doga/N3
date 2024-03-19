@@ -1,7 +1,7 @@
 // **N3Parser** parses N3 documents.
-import N3Lexer from './N3Lexer';
-import N3DataFactory from './N3DataFactory';
-import namespaces from './IRIs';
+import N3Lexer from './N3Lexer.mjs'
+import N3DataFactory from './N3DataFactory.mjs'
+import namespaces from './IRIs.mjs'
 
 let blankNodePrefix = 0;
 
@@ -18,11 +18,11 @@ export default class N3Parser {
 
     // Set supported features depending on the format
     const format = (typeof options.format === 'string') ?
-                 options.format.match(/\w*$/)[0].toLowerCase() : '',
-        isTurtle = /turtle/.test(format), isTriG = /trig/.test(format),
-        isNTriples = /triple/.test(format), isNQuads = /quad/.test(format),
-        isN3 = this._n3Mode = /n3/.test(format),
-        isLineMode = isNTriples || isNQuads;
+      options.format.match(/\w*$/)[0].toLowerCase() : '',
+      isTurtle = /turtle/.test(format), isTriG = /trig/.test(format),
+      isNTriples = /triple/.test(format), isNQuads = /quad/.test(format),
+      isN3 = this._n3Mode = /n3/.test(format),
+      isLineMode = isNTriples || isNQuads;
     if (!(this._supportsNamedGraphs = !(isTurtle || isN3)))
       this._readPredicateOrNamedGraph = this._readPredicate;
     // Support triples in other graphs
@@ -33,7 +33,7 @@ export default class N3Parser {
     if (isLineMode)
       this._resolveRelativeIRI = iri => { return null; };
     this._blankNodePrefix = typeof options.blankNodePrefix !== 'string' ? '' :
-                              options.blankNodePrefix.replace(/^(?!_:)/, '_:');
+      options.blankNodePrefix.replace(/^(?!_:)/, '_:');
     this._lexer = options.lexer || new N3Lexer({ lineMode: isLineMode, n3: isN3 });
     // Disable explicit quantifiers by default
     this._explicitQuantifiers = !!options.explicitQuantifiers;
@@ -61,10 +61,10 @@ export default class N3Parser {
         baseIRI = baseIRI.substr(0, fragmentPos);
       // Set base IRI and its components
       this._base = baseIRI;
-      this._basePath   = baseIRI.indexOf('/') < 0 ? baseIRI :
-                         baseIRI.replace(/[^\/?]*(?:\?.*)?$/, '');
+      this._basePath = baseIRI.indexOf('/') < 0 ? baseIRI :
+        baseIRI.replace(/[^\/?]*(?:\?.*)?$/, '');
       baseIRI = baseIRI.match(/^(?:([a-z][a-z0-9+.-]*:))?(?:\/\/[^\/]*)?/i);
-      this._baseRoot   = baseIRI[0];
+      this._baseRoot = baseIRI[0];
       this._baseScheme = baseIRI[1];
     }
   }
@@ -101,10 +101,10 @@ export default class N3Parser {
       return this._error(`Unexpected ${token.type}`, token);
 
     // Restore the quad of the previous context
-    this._subject   = context.subject;
+    this._subject = context.subject;
     this._predicate = context.predicate;
-    this._object    = context.object;
-    this._graph     = context.graph;
+    this._object = context.object;
+    this._graph = context.graph;
 
     // Restore N3 context settings
     if (this._n3Mode) {
@@ -117,35 +117,35 @@ export default class N3Parser {
   // ### `_readInTopContext` reads a token when in the top context
   _readInTopContext(token) {
     switch (token.type) {
-    // If an EOF token arrives in the top context, signal that we're done
-    case 'eof':
-      if (this._graph !== null)
-        return this._error('Unclosed graph', token);
-      delete this._prefixes._;
-      return this._callback(null, null, this._prefixes);
-    // It could be a prefix declaration
-    case 'PREFIX':
-      this._sparqlStyle = true;
-    case '@prefix':
-      return this._readPrefix;
-    // It could be a base declaration
-    case 'BASE':
-      this._sparqlStyle = true;
-    case '@base':
-      return this._readBaseIRI;
-    // It could be a graph
-    case '{':
-      if (this._supportsNamedGraphs) {
-        this._graph = '';
-        this._subject = null;
-        return this._readSubject;
-      }
-    case 'GRAPH':
-      if (this._supportsNamedGraphs)
-        return this._readNamedGraphLabel;
-    // Otherwise, the next token must be a subject
-    default:
-      return this._readSubject(token);
+      // If an EOF token arrives in the top context, signal that we're done
+      case 'eof':
+        if (this._graph !== null)
+          return this._error('Unclosed graph', token);
+        delete this._prefixes._;
+        return this._callback(null, null, this._prefixes);
+      // It could be a prefix declaration
+      case 'PREFIX':
+        this._sparqlStyle = true;
+      case '@prefix':
+        return this._readPrefix;
+      // It could be a base declaration
+      case 'BASE':
+        this._sparqlStyle = true;
+      case '@base':
+        return this._readBaseIRI;
+      // It could be a graph
+      case '{':
+        if (this._supportsNamedGraphs) {
+          this._graph = '';
+          this._subject = null;
+          return this._readSubject;
+        }
+      case 'GRAPH':
+        if (this._supportsNamedGraphs)
+          return this._readNamedGraphLabel;
+      // Otherwise, the next token must be a subject
+      default:
+        return this._readSubject(token);
     }
   }
 
@@ -153,33 +153,33 @@ export default class N3Parser {
   _readEntity(token, quantifier) {
     let value;
     switch (token.type) {
-    // Read a relative or absolute IRI
-    case 'IRI':
-    case 'typeIRI':
-      const iri = this._resolveIRI(token.value);
-      if (iri === null)
-        return this._error('Invalid IRI', token);
-      value = this._namedNode(iri);
-      break;
-    // Read a prefixed name
-    case 'type':
-    case 'prefixed':
-      const prefix = this._prefixes[token.prefix];
-      if (prefix === undefined)
-        return this._error(`Undefined prefix "${token.prefix}:"`, token);
-      value = this._namedNode(prefix + token.value);
-      break;
-    // Read a blank node
-    case 'blank':
-      value = this._blankNode(this._prefixes[token.prefix] + token.value);
-      break;
-    // Read a variable
-    case 'var':
-      value = this._variable(token.value.substr(1));
-      break;
-    // Everything else is not an entity
-    default:
-      return this._error(`Expected entity but got ${token.type}`, token);
+      // Read a relative or absolute IRI
+      case 'IRI':
+      case 'typeIRI':
+        const iri = this._resolveIRI(token.value);
+        if (iri === null)
+          return this._error('Invalid IRI', token);
+        value = this._namedNode(iri);
+        break;
+      // Read a prefixed name
+      case 'type':
+      case 'prefixed':
+        const prefix = this._prefixes[token.prefix];
+        if (prefix === undefined)
+          return this._error(`Undefined prefix "${token.prefix}:"`, token);
+        value = this._namedNode(prefix + token.value);
+        break;
+      // Read a blank node
+      case 'blank':
+        value = this._blankNode(this._prefixes[token.prefix] + token.value);
+        break;
+      // Read a variable
+      case 'var':
+        value = this._variable(token.value.substr(1));
+        break;
+      // Everything else is not an entity
+      default:
+        return this._error(`Expected entity but got ${token.type}`, token);
     }
     // In N3 mode, replace the entity if it is quantified
     if (!quantifier && this._n3Mode && (value.id in this._quantified))
@@ -191,65 +191,65 @@ export default class N3Parser {
   _readSubject(token) {
     this._predicate = null;
     switch (token.type) {
-    case '[':
-      // Start a new quad with a new blank node as subject
-      this._saveContext('blank', this._graph,
-                        this._subject = this._blankNode(), null, null);
-      return this._readBlankNodeHead;
-    case '(':
-      // Start a new list
-      this._saveContext('list', this._graph, this.RDF_NIL, null, null);
-      this._subject = null;
-      return this._readListItem;
-    case '{':
-      // Start a new formula
-      if (!this._n3Mode)
-        return this._error('Unexpected graph', token);
-      this._saveContext('formula', this._graph,
-                        this._graph = this._blankNode(), null, null);
-      return this._readSubject;
-    case '}':
-       // No subject; the graph in which we are reading is closed instead
-      return this._readPunctuation(token);
-    case '@forSome':
-      if (!this._n3Mode)
-        return this._error('Unexpected "@forSome"', token);
-      this._subject = null;
-      this._predicate = this.N3_FORSOME;
-      this._quantifier = this._blankNode;
-      return this._readQuantifierList;
-    case '@forAll':
-      if (!this._n3Mode)
-        return this._error('Unexpected "@forAll"', token);
-      this._subject = null;
-      this._predicate = this.N3_FORALL;
-      this._quantifier = this._variable;
-      return this._readQuantifierList;
-    case 'literal':
-      if (!this._n3Mode)
-        return this._error('Unexpected literal', token);
+      case '[':
+        // Start a new quad with a new blank node as subject
+        this._saveContext('blank', this._graph,
+          this._subject = this._blankNode(), null, null);
+        return this._readBlankNodeHead;
+      case '(':
+        // Start a new list
+        this._saveContext('list', this._graph, this.RDF_NIL, null, null);
+        this._subject = null;
+        return this._readListItem;
+      case '{':
+        // Start a new formula
+        if (!this._n3Mode)
+          return this._error('Unexpected graph', token);
+        this._saveContext('formula', this._graph,
+          this._graph = this._blankNode(), null, null);
+        return this._readSubject;
+      case '}':
+        // No subject; the graph in which we are reading is closed instead
+        return this._readPunctuation(token);
+      case '@forSome':
+        if (!this._n3Mode)
+          return this._error('Unexpected "@forSome"', token);
+        this._subject = null;
+        this._predicate = this.N3_FORSOME;
+        this._quantifier = this._blankNode;
+        return this._readQuantifierList;
+      case '@forAll':
+        if (!this._n3Mode)
+          return this._error('Unexpected "@forAll"', token);
+        this._subject = null;
+        this._predicate = this.N3_FORALL;
+        this._quantifier = this._variable;
+        return this._readQuantifierList;
+      case 'literal':
+        if (!this._n3Mode)
+          return this._error('Unexpected literal', token);
 
-      if (token.prefix.length === 0) {
-        this._literalValue = token.value;
-        return this._completeSubjectLiteral;
-      }
-      else
-        this._subject = this._literal(token.value, this._namedNode(token.prefix));
+        if (token.prefix.length === 0) {
+          this._literalValue = token.value;
+          return this._completeSubjectLiteral;
+        }
+        else
+          this._subject = this._literal(token.value, this._namedNode(token.prefix));
 
-      break;
-    case '<<':
-      if (!this._supportsRDFStar)
-        return this._error('Unexpected RDF* syntax', token);
-      this._saveContext('<<', this._graph, null, null, null);
-      this._graph = null;
-      return this._readSubject;
-    default:
-      // Read the subject entity
-      if ((this._subject = this._readEntity(token)) === undefined)
-        return;
-      // In N3 mode, the subject might be a path
-      if (this._n3Mode)
-        return this._getPathReader(this._readPredicateOrNamedGraph);
+        break;
+      case '<<':
+        if (!this._supportsRDFStar)
+          return this._error('Unexpected RDF* syntax', token);
+        this._saveContext('<<', this._graph, null, null, null);
+        this._graph = null;
+        return this._readSubject;
+      default:
+        // Read the subject entity
+        if ((this._subject = this._readEntity(token)) === undefined)
+          return;
+        // In N3 mode, the subject might be a path
+        if (this._n3Mode)
+          return this._getPathReader(this._readPredicateOrNamedGraph);
     }
 
     // The next token must be a predicate,
@@ -261,36 +261,36 @@ export default class N3Parser {
   _readPredicate(token) {
     const type = token.type;
     switch (type) {
-    case 'inverse':
-      this._inversePredicate = true;
-    case 'abbreviation':
-      this._predicate = this.ABBREVIATIONS[token.value];
-      break;
-    case '.':
-    case ']':
-    case '}':
-      // Expected predicate didn't come, must have been trailing semicolon
-      if (this._predicate === null)
-        return this._error(`Unexpected ${type}`, token);
-      this._subject = null;
-      return type === ']' ? this._readBlankNodeTail(token) : this._readPunctuation(token);
-    case ';':
-      // Additional semicolons can be safely ignored
-      return this._predicate !== null ? this._readPredicate :
-             this._error('Expected predicate but got ;', token);
-    case '[':
-      if (this._n3Mode) {
-        // Start a new quad with a new blank node as subject
-        this._saveContext('blank', this._graph, this._subject,
-                          this._subject = this._blankNode(), null);
-        return this._readBlankNodeHead;
-      }
-    case 'blank':
-      if (!this._n3Mode)
-        return this._error('Disallowed blank node as predicate', token);
-    default:
-      if ((this._predicate = this._readEntity(token)) === undefined)
-        return;
+      case 'inverse':
+        this._inversePredicate = true;
+      case 'abbreviation':
+        this._predicate = this.ABBREVIATIONS[token.value];
+        break;
+      case '.':
+      case ']':
+      case '}':
+        // Expected predicate didn't come, must have been trailing semicolon
+        if (this._predicate === null)
+          return this._error(`Unexpected ${type}`, token);
+        this._subject = null;
+        return type === ']' ? this._readBlankNodeTail(token) : this._readPunctuation(token);
+      case ';':
+        // Additional semicolons can be safely ignored
+        return this._predicate !== null ? this._readPredicate :
+          this._error('Expected predicate but got ;', token);
+      case '[':
+        if (this._n3Mode) {
+          // Start a new quad with a new blank node as subject
+          this._saveContext('blank', this._graph, this._subject,
+            this._subject = this._blankNode(), null);
+          return this._readBlankNodeHead;
+        }
+      case 'blank':
+        if (!this._n3Mode)
+          return this._error('Disallowed blank node as predicate', token);
+      default:
+        if ((this._predicate = this._readEntity(token)) === undefined)
+          return;
     }
     // The next token must be an object
     return this._readObject;
@@ -299,46 +299,46 @@ export default class N3Parser {
   // ### `_readObject` reads a quad's object
   _readObject(token) {
     switch (token.type) {
-    case 'literal':
-      // Regular literal, can still get a datatype or language
-      if (token.prefix.length === 0) {
-        this._literalValue = token.value;
-        return this._readDataTypeOrLang;
-      }
-      // Pre-datatyped string literal (prefix stores the datatype)
-      else
-        this._object = this._literal(token.value, this._namedNode(token.prefix));
-      break;
-    case '[':
-      // Start a new quad with a new blank node as subject
-      this._saveContext('blank', this._graph, this._subject, this._predicate,
-                        this._subject = this._blankNode());
-      return this._readBlankNodeHead;
-    case '(':
-      // Start a new list
-      this._saveContext('list', this._graph, this._subject, this._predicate, this.RDF_NIL);
-      this._subject = null;
-      return this._readListItem;
-    case '{':
-      // Start a new formula
-      if (!this._n3Mode)
-        return this._error('Unexpected graph', token);
-      this._saveContext('formula', this._graph, this._subject, this._predicate,
-                        this._graph = this._blankNode());
-      return this._readSubject;
-    case '<<':
-      if (!this._supportsRDFStar)
-        return this._error('Unexpected RDF* syntax', token);
-      this._saveContext('<<', this._graph, this._subject, this._predicate, null);
-      this._graph = null;
-      return this._readSubject;
-    default:
-      // Read the object entity
-      if ((this._object = this._readEntity(token)) === undefined)
-        return;
-      // In N3 mode, the object might be a path
-      if (this._n3Mode)
-        return this._getPathReader(this._getContextEndReader());
+      case 'literal':
+        // Regular literal, can still get a datatype or language
+        if (token.prefix.length === 0) {
+          this._literalValue = token.value;
+          return this._readDataTypeOrLang;
+        }
+        // Pre-datatyped string literal (prefix stores the datatype)
+        else
+          this._object = this._literal(token.value, this._namedNode(token.prefix));
+        break;
+      case '[':
+        // Start a new quad with a new blank node as subject
+        this._saveContext('blank', this._graph, this._subject, this._predicate,
+          this._subject = this._blankNode());
+        return this._readBlankNodeHead;
+      case '(':
+        // Start a new list
+        this._saveContext('list', this._graph, this._subject, this._predicate, this.RDF_NIL);
+        this._subject = null;
+        return this._readListItem;
+      case '{':
+        // Start a new formula
+        if (!this._n3Mode)
+          return this._error('Unexpected graph', token);
+        this._saveContext('formula', this._graph, this._subject, this._predicate,
+          this._graph = this._blankNode());
+        return this._readSubject;
+      case '<<':
+        if (!this._supportsRDFStar)
+          return this._error('Unexpected RDF* syntax', token);
+        this._saveContext('<<', this._graph, this._subject, this._predicate, null);
+        this._graph = null;
+        return this._readSubject;
+      default:
+        // Read the object entity
+        if ((this._object = this._readEntity(token)) === undefined)
+          return;
+        // In N3 mode, the object might be a path
+        if (this._n3Mode)
+          return this._getPathReader(this._getContextEndReader());
     }
     return this._getContextEndReader();
   }
@@ -396,89 +396,89 @@ export default class N3Parser {
   // ### `_readPredicateAfterBlank` reads a predicate after an anonymous blank node
   _readPredicateAfterBlank(token) {
     switch (token.type) {
-    case '.':
-    case '}':
-      // No predicate is coming if the triple is terminated here
-      this._subject = null;
-      return this._readPunctuation(token);
-    default:
-      return this._readPredicate(token);
+      case '.':
+      case '}':
+        // No predicate is coming if the triple is terminated here
+        this._subject = null;
+        return this._readPunctuation(token);
+      default:
+        return this._readPredicate(token);
     }
   }
 
   // ### `_readListItem` reads items from a list
   _readListItem(token) {
     let item = null,                      // The item of the list
-        list = null,                      // The list itself
-        next = this._readListItem;        // The next function to execute
+      list = null,                      // The list itself
+      next = this._readListItem;        // The next function to execute
     const previousList = this._subject,   // The previous list that contains this list
-        stack = this._contextStack,       // The stack of parent contexts
-        parent = stack[stack.length - 1]; // The parent containing the current list
+      stack = this._contextStack,       // The stack of parent contexts
+      parent = stack[stack.length - 1]; // The parent containing the current list
 
     switch (token.type) {
-    case '[':
-      // Stack the current list quad and start a new quad with a blank node as subject
-      this._saveContext('blank', this._graph,
-                        list = this._blankNode(), this.RDF_FIRST,
-                        this._subject = item = this._blankNode());
-      next = this._readBlankNodeHead;
-      break;
-    case '(':
-      // Stack the current list quad and start a new list
-      this._saveContext('list', this._graph,
-                        list = this._blankNode(), this.RDF_FIRST, this.RDF_NIL);
-      this._subject = null;
-      break;
-    case ')':
-      // Closing the list; restore the parent context
-      this._restoreContext('list', token);
-      // If this list is contained within a parent list, return the membership quad here.
-      // This will be `<parent list element> rdf:first <this list>.`.
-      if (stack.length !== 0 && stack[stack.length - 1].type === 'list')
-        this._emit(this._subject, this._predicate, this._object, this._graph);
-      // Was this list the parent's subject?
-      if (this._predicate === null) {
-        // The next token is the predicate
-        next = this._readPredicate;
-        // No list tail if this was an empty list
-        if (this._subject === this.RDF_NIL)
-          return next;
-      }
-      // The list was in the parent context's object
-      else {
-        next = this._getContextEndReader();
-        // No list tail if this was an empty list
-        if (this._object === this.RDF_NIL)
-          return next;
-      }
-      // Close the list by making the head nil
-      list = this.RDF_NIL;
-      break;
-    case 'literal':
-      // Regular literal, can still get a datatype or language
-      if (token.prefix.length === 0) {
-        this._literalValue = token.value;
-        next = this._readListItemDataTypeOrLang;
-      }
-      // Pre-datatyped string literal (prefix stores the datatype)
-      else {
-        item = this._literal(token.value, this._namedNode(token.prefix));
-        next = this._getContextEndReader();
-      }
-      break;
-    case '{':
-      // Start a new formula
-      if (!this._n3Mode)
-        return this._error('Unexpected graph', token);
-      this._saveContext('formula', this._graph, this._subject, this._predicate,
-                        this._graph = this._blankNode());
-      return this._readSubject;
-    default:
-      if ((item = this._readEntity(token)) === undefined)
-        return;
+      case '[':
+        // Stack the current list quad and start a new quad with a blank node as subject
+        this._saveContext('blank', this._graph,
+          list = this._blankNode(), this.RDF_FIRST,
+          this._subject = item = this._blankNode());
+        next = this._readBlankNodeHead;
+        break;
+      case '(':
+        // Stack the current list quad and start a new list
+        this._saveContext('list', this._graph,
+          list = this._blankNode(), this.RDF_FIRST, this.RDF_NIL);
+        this._subject = null;
+        break;
+      case ')':
+        // Closing the list; restore the parent context
+        this._restoreContext('list', token);
+        // If this list is contained within a parent list, return the membership quad here.
+        // This will be `<parent list element> rdf:first <this list>.`.
+        if (stack.length !== 0 && stack[stack.length - 1].type === 'list')
+          this._emit(this._subject, this._predicate, this._object, this._graph);
+        // Was this list the parent's subject?
+        if (this._predicate === null) {
+          // The next token is the predicate
+          next = this._readPredicate;
+          // No list tail if this was an empty list
+          if (this._subject === this.RDF_NIL)
+            return next;
+        }
+        // The list was in the parent context's object
+        else {
+          next = this._getContextEndReader();
+          // No list tail if this was an empty list
+          if (this._object === this.RDF_NIL)
+            return next;
+        }
+        // Close the list by making the head nil
+        list = this.RDF_NIL;
+        break;
+      case 'literal':
+        // Regular literal, can still get a datatype or language
+        if (token.prefix.length === 0) {
+          this._literalValue = token.value;
+          next = this._readListItemDataTypeOrLang;
+        }
+        // Pre-datatyped string literal (prefix stores the datatype)
+        else {
+          item = this._literal(token.value, this._namedNode(token.prefix));
+          next = this._getContextEndReader();
+        }
+        break;
+      case '{':
+        // Start a new formula
+        if (!this._n3Mode)
+          return this._error('Unexpected graph', token);
+        this._saveContext('formula', this._graph, this._subject, this._predicate,
+          this._graph = this._blankNode());
+        return this._readSubject;
+      default:
+        if ((item = this._readEntity(token)) === undefined)
+          return;
     }
 
-     // Create a new blank node if no item head was assigned yet
+    // Create a new blank node if no item head was assigned yet
     if (list === null)
       this._subject = list = this._blankNode();
 
@@ -527,19 +527,19 @@ export default class N3Parser {
     let literal = this._literal(this._literalValue);
 
     switch (token.type) {
-    // Create a datatyped literal
-    case 'type':
-    case 'typeIRI':
-      const datatype = this._readEntity(token);
-      if (datatype === undefined) return; // No datatype means an error occurred
-      literal = this._literal(this._literalValue, datatype);
-      token = null;
-      break;
-    // Create a language-tagged string
-    case 'langcode':
-      literal = this._literal(this._literalValue, token.value);
-      token = null;
-      break;
+      // Create a datatyped literal
+      case 'type':
+      case 'typeIRI':
+        const datatype = this._readEntity(token);
+        if (datatype === undefined) return; // No datatype means an error occurred
+        literal = this._literal(this._literalValue, datatype);
+        token = null;
+        break;
+      // Create a language-tagged string
+      case 'langcode':
+        literal = this._literal(this._literalValue, token.value);
+        token = null;
+        break;
     }
 
     return { token, literal };
@@ -593,76 +593,76 @@ export default class N3Parser {
     let next, graph = this._graph;
     const subject = this._subject, inversePredicate = this._inversePredicate;
     switch (token.type) {
-    // A closing brace ends a graph
-    case '}':
-      if (this._graph === null)
-        return this._error('Unexpected graph closing', token);
-      if (this._n3Mode)
-        return this._readFormulaTail(token);
-      this._graph = null;
-    // A dot just ends the statement, without sharing anything with the next
-    case '.':
-      this._subject = null;
-      next = this._contextStack.length ? this._readSubject : this._readInTopContext;
-      if (inversePredicate) this._inversePredicate = false;
-      break;
-    // Semicolon means the subject is shared; predicate and object are different
-    case ';':
-      next = this._readPredicate;
-      break;
-    // Comma means both the subject and predicate are shared; the object is different
-    case ',':
-      next = this._readObject;
-      break;
-    // {| means that the current triple is annotated with predicate-object pairs.
-    case '{|':
-      if (!this._supportsRDFStar)
-        return this._error('Unexpected RDF* syntax', token);
-      // Continue using the last triple as quoted triple subject for the predicate-object pairs.
-      const predicate = this._predicate, object = this._object;
-      this._subject = this._quad(subject, predicate, object, this.DEFAULTGRAPH);
-      next = this._readPredicate;
-      break;
-    // |} means that the current quoted triple in annotation syntax is finalized.
-    case '|}':
-      if (this._subject.termType !== 'Quad')
-        return this._error('Unexpected asserted triple closing', token);
-      this._subject = null;
-      next = this._readPunctuation;
-      break;
-    default:
-      // An entity means this is a quad (only allowed if not already inside a graph)
-      if (this._supportsQuads && this._graph === null && (graph = this._readEntity(token)) !== undefined) {
-        next = this._readQuadPunctuation;
+      // A closing brace ends a graph
+      case '}':
+        if (this._graph === null)
+          return this._error('Unexpected graph closing', token);
+        if (this._n3Mode)
+          return this._readFormulaTail(token);
+        this._graph = null;
+      // A dot just ends the statement, without sharing anything with the next
+      case '.':
+        this._subject = null;
+        next = this._contextStack.length ? this._readSubject : this._readInTopContext;
+        if (inversePredicate) this._inversePredicate = false;
         break;
-      }
-      return this._error(`Expected punctuation to follow "${this._object.id}"`, token);
+      // Semicolon means the subject is shared; predicate and object are different
+      case ';':
+        next = this._readPredicate;
+        break;
+      // Comma means both the subject and predicate are shared; the object is different
+      case ',':
+        next = this._readObject;
+        break;
+      // {| means that the current triple is annotated with predicate-object pairs.
+      case '{|':
+        if (!this._supportsRDFStar)
+          return this._error('Unexpected RDF* syntax', token);
+        // Continue using the last triple as quoted triple subject for the predicate-object pairs.
+        const predicate = this._predicate, object = this._object;
+        this._subject = this._quad(subject, predicate, object, this.DEFAULTGRAPH);
+        next = this._readPredicate;
+        break;
+      // |} means that the current quoted triple in annotation syntax is finalized.
+      case '|}':
+        if (this._subject.termType !== 'Quad')
+          return this._error('Unexpected asserted triple closing', token);
+        this._subject = null;
+        next = this._readPunctuation;
+        break;
+      default:
+        // An entity means this is a quad (only allowed if not already inside a graph)
+        if (this._supportsQuads && this._graph === null && (graph = this._readEntity(token)) !== undefined) {
+          next = this._readQuadPunctuation;
+          break;
+        }
+        return this._error(`Expected punctuation to follow "${this._object.id}"`, token);
     }
     // A quad has been completed now, so return it
     if (subject !== null) {
       const predicate = this._predicate, object = this._object;
       if (!inversePredicate)
-        this._emit(subject, predicate, object,  graph);
+        this._emit(subject, predicate, object, graph);
       else
-        this._emit(object,  predicate, subject, graph);
+        this._emit(object, predicate, subject, graph);
     }
     return next;
   }
 
-    // ### `_readBlankNodePunctuation` reads punctuation in a blank node
+  // ### `_readBlankNodePunctuation` reads punctuation in a blank node
   _readBlankNodePunctuation(token) {
     let next;
     switch (token.type) {
-    // Semicolon means the subject is shared; predicate and object are different
-    case ';':
-      next = this._readPredicate;
-      break;
-    // Comma means both the subject and predicate are shared; the object is different
-    case ',':
-      next = this._readObject;
-      break;
-    default:
-      return this._error(`Expected punctuation to follow "${this._object.id}"`, token);
+      // Semicolon means the subject is shared; predicate and object are different
+      case ';':
+        next = this._readPredicate;
+        break;
+      // Comma means both the subject and predicate are shared; the object is different
+      case ',':
+        next = this._readObject;
+        break;
+      default:
+        return this._error(`Expected punctuation to follow "${this._object.id}"`, token);
     }
     // A quad has been completed now, so return it
     this._emit(this._subject, this._predicate, this._object, this._graph);
@@ -706,14 +706,14 @@ export default class N3Parser {
   // ### `_readNamedGraphLabel` reads the label of a named graph
   _readNamedGraphLabel(token) {
     switch (token.type) {
-    case 'IRI':
-    case 'blank':
-    case 'prefixed':
-      return this._readSubject(token), this._readGraph;
-    case '[':
-      return this._readNamedGraphBlankLabel;
-    default:
-      return this._error('Invalid graph label', token);
+      case 'IRI':
+      case 'blank':
+      case 'prefixed':
+        return this._readSubject(token), this._readGraph;
+      case '[':
+        return this._readNamedGraphBlankLabel;
+      default:
+        return this._error('Invalid graph label', token);
     }
   }
 
@@ -742,12 +742,12 @@ export default class N3Parser {
   _readQuantifierList(token) {
     let entity;
     switch (token.type) {
-    case 'IRI':
-    case 'prefixed':
-      if ((entity = this._readEntity(token, true)) !== undefined)
-        break;
-    default:
-      return this._error(`Unexpected ${token.type}`, token);
+      case 'IRI':
+      case 'prefixed':
+        if ((entity = this._readEntity(token, true)) !== undefined)
+          break;
+      default:
+        return this._error(`Unexpected ${token.type}`, token);
     }
     // Without explicit quantifiers, map entities to a quantified entity
     if (!this._explicitQuantifiers)
@@ -757,11 +757,11 @@ export default class N3Parser {
       // If this is the first item, start a new quantifier list
       if (this._subject === null)
         this._emit(this._graph || this.DEFAULTGRAPH, this._predicate,
-                   this._subject = this._blankNode(), this.QUANTIFIERS_GRAPH);
+          this._subject = this._blankNode(), this.QUANTIFIERS_GRAPH);
       // Otherwise, continue the previous list
       else
         this._emit(this._subject, this.RDF_REST,
-                   this._subject = this._blankNode(), this.QUANTIFIERS_GRAPH);
+          this._subject = this._blankNode(), this.QUANTIFIERS_GRAPH);
       // Output the list item
       this._emit(this._subject, this.RDF_FIRST, entity, this.QUANTIFIERS_GRAPH);
     }
@@ -795,23 +795,23 @@ export default class N3Parser {
   // ### `_readPath` reads a potential path
   _readPath(token) {
     switch (token.type) {
-    // Forward path
-    case '!': return this._readForwardPath;
-    // Backward path
-    case '^': return this._readBackwardPath;
-    // Not a path; resume reading where we left off
-    default:
-      const stack = this._contextStack, parent = stack.length && stack[stack.length - 1];
-      // If we were reading a list item, we still need to output it
-      if (parent && parent.type === 'item') {
-        // The list item is the remaining subejct after reading the path
-        const item = this._subject;
-        // Switch back to the context of the list
-        this._restoreContext('item', token);
-        // Output the list item
-        this._emit(this._subject, this.RDF_FIRST, item, this._graph);
-      }
-      return this._afterPath(token);
+      // Forward path
+      case '!': return this._readForwardPath;
+      // Backward path
+      case '^': return this._readBackwardPath;
+      // Not a path; resume reading where we left off
+      default:
+        const stack = this._contextStack, parent = stack.length && stack[stack.length - 1];
+        // If we were reading a list item, we still need to output it
+        if (parent && parent.type === 'item') {
+          // The list item is the remaining subejct after reading the path
+          const item = this._subject;
+          // Switch back to the context of the list
+          this._restoreContext('item', token);
+          // Output the list item
+          this._emit(this._subject, this.RDF_FIRST, item, this._graph);
+        }
+        return this._afterPath(token);
     }
   }
 
@@ -827,7 +827,7 @@ export default class N3Parser {
       subject = this._subject, this._subject = object;
     // If we were reading an object, replace the subject by the path's object
     else
-      subject = this._object,  this._object  = object;
+      subject = this._object, this._object = object;
     // Emit the path's current quad and read its next section
     this._emit(subject, predicate, object, this._graph);
     return this._readPath;
@@ -845,7 +845,7 @@ export default class N3Parser {
       object = this._subject, this._subject = subject;
     // If we were reading an object, replace the subject by the path's subject
     else
-      object = this._object,  this._object  = subject;
+      object = this._object, this._object = subject;
     // Emit the path's current quad and read its next section
     this._emit(subject, predicate, object, this._graph);
     return this._readPath;
@@ -889,14 +889,14 @@ export default class N3Parser {
       return this._readPunctuation;
 
     switch (contextStack[contextStack.length - 1].type) {
-    case 'blank':
-      return this._readBlankNodeTail;
-    case 'list':
-      return this._readListItem;
-    case 'formula':
-      return this._readFormulaTail;
-    case '<<':
-      return this._readRDFStarTailOrGraph;
+      case 'blank':
+        return this._readBlankNodeTail;
+      case 'list':
+        return this._readListItem;
+      case 'formula':
+        return this._readFormulaTail;
+      case '<<':
+        return this._readRDFStarTailOrGraph;
     }
   }
 
@@ -930,18 +930,18 @@ export default class N3Parser {
       return this._base;
     // Decide resolving strategy based in the first character
     switch (iri[0]) {
-    // Resolve relative fragment IRIs against the base IRI
-    case '#': return this._base + iri;
-    // Resolve relative query string IRIs by replacing the query string
-    case '?': return this._base.replace(/(?:\?.*)?$/, iri);
-    // Resolve root-relative IRIs at the root of the base IRI
-    case '/':
-      // Resolve scheme-relative IRIs to the scheme
-      return (iri[1] === '/' ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri);
-    // Resolve all other IRIs at the base IRI's path
-    default:
-      // Relative IRIs cannot contain a colon in the first path segment
-      return (/^[^/:]*:/.test(iri)) ? null : this._removeDotSegments(this._basePath + iri);
+      // Resolve relative fragment IRIs against the base IRI
+      case '#': return this._base + iri;
+      // Resolve relative query string IRIs by replacing the query string
+      case '?': return this._base.replace(/(?:\?.*)?$/, iri);
+      // Resolve root-relative IRIs at the root of the base IRI
+      case '/':
+        // Resolve scheme-relative IRIs to the scheme
+        return (iri[1] === '/' ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri);
+      // Resolve all other IRIs at the base IRI's path
+      default:
+        // Relative IRIs cannot contain a colon in the first path segment
+        return (/^[^/:]*:/.test(iri)) ? null : this._removeDotSegments(this._basePath + iri);
     }
   }
 
@@ -957,51 +957,51 @@ export default class N3Parser {
 
     while (i < length) {
       switch (next) {
-      // The path starts with the first slash after the authority
-      case ':':
-        if (pathStart < 0) {
-          // Skip two slashes before the authority
-          if (iri[++i] === '/' && iri[++i] === '/')
-            // Skip to slash after the authority
-            while ((pathStart = i + 1) < length && iri[pathStart] !== '/')
-              i = pathStart;
-        }
-        break;
-      // Don't modify a query string or fragment
-      case '?':
-      case '#':
-        i = length;
-        break;
-      // Handle '/.' or '/..' path segments
-      case '/':
-        if (iri[i + 1] === '.') {
-          next = iri[++i + 1];
-          switch (next) {
-          // Remove a '/.' segment
-          case '/':
-            result += iri.substring(segmentStart, i - 1);
-            segmentStart = i + 1;
-            break;
-          // Remove a trailing '/.' segment
-          case undefined:
-          case '?':
-          case '#':
-            return result + iri.substring(segmentStart, i) + iri.substr(i + 1);
-          // Remove a '/..' segment
-          case '.':
+        // The path starts with the first slash after the authority
+        case ':':
+          if (pathStart < 0) {
+            // Skip two slashes before the authority
+            if (iri[++i] === '/' && iri[++i] === '/')
+              // Skip to slash after the authority
+              while ((pathStart = i + 1) < length && iri[pathStart] !== '/')
+                i = pathStart;
+          }
+          break;
+        // Don't modify a query string or fragment
+        case '?':
+        case '#':
+          i = length;
+          break;
+        // Handle '/.' or '/..' path segments
+        case '/':
+          if (iri[i + 1] === '.') {
             next = iri[++i + 1];
-            if (next === undefined || next === '/' || next === '?' || next === '#') {
-              result += iri.substring(segmentStart, i - 2);
-              // Try to remove the parent path from result
-              if ((segmentStart = result.lastIndexOf('/')) >= pathStart)
-                result = result.substr(0, segmentStart);
-              // Remove a trailing '/..' segment
-              if (next !== '/')
-                return `${result}/${iri.substr(i + 1)}`;
-              segmentStart = i + 1;
+            switch (next) {
+              // Remove a '/.' segment
+              case '/':
+                result += iri.substring(segmentStart, i - 1);
+                segmentStart = i + 1;
+                break;
+              // Remove a trailing '/.' segment
+              case undefined:
+              case '?':
+              case '#':
+                return result + iri.substring(segmentStart, i) + iri.substr(i + 1);
+              // Remove a '/..' segment
+              case '.':
+                next = iri[++i + 1];
+                if (next === undefined || next === '/' || next === '?' || next === '#') {
+                  result += iri.substring(segmentStart, i - 2);
+                  // Try to remove the parent path from result
+                  if ((segmentStart = result.lastIndexOf('/')) >= pathStart)
+                    result = result.substr(0, segmentStart);
+                  // Remove a trailing '/..' segment
+                  if (next !== '/')
+                    return `${result}/${iri.substr(i + 1)}`;
+                  segmentStart = i + 1;
+                }
             }
           }
-        }
       }
       next = iri[++i];
     }
@@ -1018,7 +1018,7 @@ export default class N3Parser {
     this._sparqlStyle = false;
     this._prefixes = Object.create(null);
     this._prefixes._ = this._blankNodePrefix ? this._blankNodePrefix.substr(2)
-                                             : `b${blankNodePrefix++}_`;
+      : `b${blankNodePrefix++}_`;
     this._prefixCallback = prefixCallback || noop;
     this._inversePredicate = false;
     this._quantified = Object.create(null);
@@ -1047,24 +1047,24 @@ export default class N3Parser {
 }
 
 // The empty function
-function noop() {}
+function noop() { }
 
 // Initializes the parser with the given data factory
 function initDataFactory(parser, factory) {
   // Set factory methods
   const namedNode = factory.namedNode;
-  parser._namedNode   = namedNode;
-  parser._blankNode   = factory.blankNode;
-  parser._literal     = factory.literal;
-  parser._variable    = factory.variable;
-  parser._quad        = factory.quad;
+  parser._namedNode = namedNode;
+  parser._blankNode = factory.blankNode;
+  parser._literal = factory.literal;
+  parser._variable = factory.variable;
+  parser._quad = factory.quad;
   parser.DEFAULTGRAPH = factory.defaultGraph();
 
   // Set common named nodes
-  parser.RDF_FIRST  = namedNode(namespaces.rdf.first);
-  parser.RDF_REST   = namedNode(namespaces.rdf.rest);
-  parser.RDF_NIL    = namedNode(namespaces.rdf.nil);
-  parser.N3_FORALL  = namedNode(namespaces.r.forAll);
+  parser.RDF_FIRST = namedNode(namespaces.rdf.first);
+  parser.RDF_REST = namedNode(namespaces.rdf.rest);
+  parser.RDF_NIL = namedNode(namespaces.rdf.nil);
+  parser.N3_FORALL = namedNode(namespaces.r.forAll);
   parser.N3_FORSOME = namedNode(namespaces.r.forSome);
   parser.ABBREVIATIONS = {
     'a': namedNode(namespaces.rdf.type),

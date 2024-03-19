@@ -1,6 +1,6 @@
 // **N3StreamParser** parses a text stream into a quad stream.
-import N3Parser from './N3Parser';
-import { Transform } from 'readable-stream';
+import N3Parser from './N3Parser.mjs'
+import { Transform } from 'https://esm.sh/readable-stream@4.5.2'
 
 // ## Constructor
 export default class N3StreamParser extends Transform {
@@ -14,8 +14,8 @@ export default class N3StreamParser extends Transform {
     parser.parse({
       on: (event, callback) => {
         switch (event) {
-        case 'data': onData = callback; break;
-        case 'end':   onEnd = callback; break;
+          case 'data': onData = callback; break;
+          case 'end': onEnd = callback; break;
         }
       },
     },
@@ -32,8 +32,8 @@ export default class N3StreamParser extends Transform {
 
   // ### Parses a stream of strings
   import(stream) {
-    stream.on('data',  chunk => { this.write(chunk); });
-    stream.on('end',   ()      => { this.end(); });
+    stream.on('data', chunk => { this.write(chunk); });
+    stream.on('end', () => { this.end(); });
     stream.on('error', error => { this.emit('error', error); });
     return this;
   }

@@ -1,10 +1,10 @@
-import Lexer from './N3Lexer';
-import Parser from './N3Parser';
-import Writer from './N3Writer';
-import Store from './N3Store';
-import StreamParser from './N3StreamParser';
-import StreamWriter from './N3StreamWriter';
-import * as Util from './N3Util';
+import Lexer from './N3Lexer.mjs'
+import Parser from './N3Parser.mjs'
+import Writer from './N3Writer.mjs'
+import Store from './N3Store.mjs'
+import StreamParser from './N3StreamParser.mjs'
+import StreamWriter from './N3StreamWriter.mjs'
+import * as Util from './N3Util.mjs'
 
 import {
   default as DataFactory,
@@ -20,7 +20,7 @@ import {
 
   termFromId,
   termToId,
-} from './N3DataFactory';
+} from './N3DataFactory.mjs';
 
 // Named exports
 export {

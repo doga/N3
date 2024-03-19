@@ -1,8 +1,8 @@
 // **N3Store** objects store N3 quads by graph in memory.
-import { default as N3DataFactory, termToId, termFromId } from './N3DataFactory';
-import { Readable } from 'readable-stream';
-import namespaces from './IRIs';
-import { isDefaultGraph } from './N3Util';
+import { default as N3DataFactory, termToId, termFromId } from './N3DataFactory.mjs'
+import { Readable } from 'https://esm.sh/readable-stream@4.5.2'
+import namespaces from './IRIs.mjs'
+import { isDefaultGraph } from './N3Util.mjs'
 
 // ## Constructor
 export default class N3Store {
@@ -48,8 +48,8 @@ export default class N3Store {
   _termToNumericId(term) {
     if (term.termType === 'Quad') {
       const s = this._termToNumericId(term.subject),
-          p = this._termToNumericId(term.predicate),
-          o = this._termToNumericId(term.object);
+        p = this._termToNumericId(term.predicate),
+        o = this._termToNumericId(term.object);
       let g;
 
       return s && p && o && (isDefaultGraph(term.graph) || (g = this._termToNumericId(term.graph))) &&
@@ -61,8 +61,7 @@ export default class N3Store {
   _termToNewNumericId(term) {
     // This assumes that no graph term is present - we may wish to error if there is one
     const str = term && term.termType === 'Quad' ?
-      `.${this._termToNewNumericId(term.subject)}.${this._termToNewNumericId(term.predicate)}.${this._termToNewNumericId(term.object)}${
-        isDefaultGraph(term.graph) ? '' : `.${this._termToNewNumericId(term.graph)}`
+      `.${this._termToNewNumericId(term.subject)}.${this._termToNewNumericId(term.predicate)}.${this._termToNewNumericId(term.object)}${isDefaultGraph(term.graph) ? '' : `.${this._termToNewNumericId(term.graph)}`
       }`
       : termToId(term);
 
@@ -268,13 +267,13 @@ export default class N3Store {
     // Since entities can often be long IRIs, we avoid storing them in every index.
     // Instead, we have a separate index that maps entities to numbers,
     // which are then used as keys in the other indexes.
-    subject   = this._termToNewNumericId(subject);
+    subject = this._termToNewNumericId(subject);
     predicate = this._termToNewNumericId(predicate);
-    object    = this._termToNewNumericId(object);
+    object = this._termToNewNumericId(object);
 
-    const changed = this._addToIndex(graphItem.subjects,   subject,   predicate, object);
-    this._addToIndex(graphItem.predicates, predicate, object,    subject);
-    this._addToIndex(graphItem.objects,    object,    subject,   predicate);
+    const changed = this._addToIndex(graphItem.subjects, subject, predicate, object);
+    this._addToIndex(graphItem.predicates, predicate, object, subject);
+    this._addToIndex(graphItem.objects, object, subject, predicate);
 
     // The cached quad count is now invalid
     this._size = null;
@@ -321,17 +320,17 @@ export default class N3Store {
     // and verify the quad exists.
     const graphs = this._graphs;
     let graphItem, subjects, predicates;
-    if (!(subject    = subject && this._termToNumericId(subject)) || !(predicate = predicate && this._termToNumericId(predicate)) ||
-        !(object     = object && this._termToNumericId(object))  || !(graphItem = graphs[graph])  ||
-        !(subjects   = graphItem.subjects[subject]) ||
-        !(predicates = subjects[predicate]) ||
-        !(object in predicates))
+    if (!(subject = subject && this._termToNumericId(subject)) || !(predicate = predicate && this._termToNumericId(predicate)) ||
+      !(object = object && this._termToNumericId(object)) || !(graphItem = graphs[graph]) ||
+      !(subjects = graphItem.subjects[subject]) ||
+      !(predicates = subjects[predicate]) ||
+      !(object in predicates))
       return false;
 
     // Remove it from all indexes
-    this._removeFromIndex(graphItem.subjects,   subject,   predicate, object);
-    this._removeFromIndex(graphItem.predicates, predicate, object,    subject);
-    this._removeFromIndex(graphItem.objects,    object,    subject,   predicate);
+    this._removeFromIndex(graphItem.subjects, subject, predicate, object);
+    this._removeFromIndex(graphItem.predicates, predicate, object, subject);
+    this._removeFromIndex(graphItem.objects, object, subject, predicate);
     if (this._size !== null) this._size--;
 
     // Remove the graph if it is empty
@@ -387,9 +386,9 @@ export default class N3Store {
     let content, subjectId, predicateId, objectId;
 
     // Translate IRIs to internal index keys.
-    if (subject   && !(subjectId   = this._termToNumericId(subject))   ||
-        predicate && !(predicateId = this._termToNumericId(predicate)) ||
-        object    && !(objectId    = this._termToNumericId(object)))
+    if (subject && !(subjectId = this._termToNumericId(subject)) ||
+      predicate && !(predicateId = this._termToNumericId(predicate)) ||
+      object && !(objectId = this._termToNumericId(object)))
       return;
 
     for (const graphId in graphs) {
@@ -400,24 +399,24 @@ export default class N3Store {
           if (objectId)
             // If subject and object are given, the object index will be the fastest
             yield* this._findInIndex(content.objects, objectId, subjectId, predicateId,
-                              'object', 'subject', 'predicate', graphId);
+              'object', 'subject', 'predicate', graphId);
           else
             // If only subject and possibly predicate are given, the subject index will be the fastest
             yield* this._findInIndex(content.subjects, subjectId, predicateId, null,
-                              'subject', 'predicate', 'object', graphId);
+              'subject', 'predicate', 'object', graphId);
         }
         else if (predicateId)
           // If only predicate and possibly object are given, the predicate index will be the fastest
           yield* this._findInIndex(content.predicates, predicateId, objectId, null,
-                            'predicate', 'object', 'subject', graphId);
+            'predicate', 'object', 'subject', graphId);
         else if (objectId)
           // If only object is given, the object index will be the fastest
           yield* this._findInIndex(content.objects, objectId, null, null,
-                            'object', 'subject', 'predicate', graphId);
+            'object', 'subject', 'predicate', graphId);
         else
           // If nothing is given, iterate subjects and predicates first
           yield* this._findInIndex(content.subjects, null, null, null,
-                            'subject', 'predicate', 'object', graphId);
+            'subject', 'predicate', 'object', graphId);
       }
     }
   }
@@ -442,9 +441,9 @@ export default class N3Store {
     let count = 0, content, subjectId, predicateId, objectId;
 
     // Translate IRIs to internal index keys.
-    if (subject   && !(subjectId   = this._termToNumericId(subject))   ||
-        predicate && !(predicateId = this._termToNumericId(predicate)) ||
-        object    && !(objectId    = this._termToNumericId(object)))
+    if (subject && !(subjectId = this._termToNumericId(subject)) ||
+      predicate && !(predicateId = this._termToNumericId(predicate)) ||
+      object && !(objectId = this._termToNumericId(object)))
       return 0;
 
     for (const graphId in graphs) {
@@ -523,7 +522,7 @@ export default class N3Store {
 
     // Translate IRIs to internal index keys.
     if (predicate && !(predicateId = this._termToNumericId(predicate)) ||
-        object    && !(objectId    = this._termToNumericId(object)))
+      object && !(objectId = this._termToNumericId(object)))
       return;
 
     for (graph in graphs) {
@@ -567,8 +566,8 @@ export default class N3Store {
     callback = this._uniqueEntities(callback);
 
     // Translate IRIs to internal index keys.
-    if (subject   && !(subjectId   = this._termToNumericId(subject))   ||
-        object    && !(objectId    = this._termToNumericId(object)))
+    if (subject && !(subjectId = this._termToNumericId(subject)) ||
+      object && !(objectId = this._termToNumericId(object)))
       return;
 
     for (graph in graphs) {
@@ -612,8 +611,8 @@ export default class N3Store {
     callback = this._uniqueEntities(callback);
 
     // Translate IRIs to internal index keys.
-    if (subject   && !(subjectId   = this._termToNumericId(subject))   ||
-        predicate && !(predicateId = this._termToNumericId(predicate)))
+    if (subject && !(subjectId = this._termToNumericId(subject)) ||
+      predicate && !(predicateId = this._termToNumericId(predicate)))
       return;
 
     for (graph in graphs) {
@@ -682,7 +681,7 @@ export default class N3Store {
   extractLists({ remove = false, ignoreErrors = false } = {}) {
     const lists = {}; // has scalar keys so could be a simple Object
     const onError = ignoreErrors ? (() => true) :
-                  ((node, message) => { throw new Error(`${node.value} ${message}`); });
+      ((node, message) => { throw new Error(`${node.value} ${message}`); });
 
     // Traverse each list from its tail
     const tails = this.getQuads(null, namespaces.rdf.rest, namespaces.rdf.nil, null);

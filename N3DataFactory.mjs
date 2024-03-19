@@ -1,8 +1,8 @@
 // N3.js implementations of the RDF/JS core data types
 // See https://github.com/rdfjs/representation-task-force/blob/master/interface-spec.md
 
-import namespaces from './IRIs';
-import { isDefaultGraph } from './N3Util';
+import namespaces from './IRIs.mjs'
+import { isDefaultGraph } from './N3Util.mjs'
 const { rdf, xsd } = namespaces;
 
 // eslint-disable-next-line prefer-const
@@ -42,7 +42,7 @@ export class Term {
       return this.id === other.id;
     // Otherwise, compare term type and value
     return !!other && this.termType === other.termType &&
-                      this.value    === other.value;
+      this.value === other.value;
   }
 
   // ### Implement hashCode for Immutable.js, since we implement `equals`
@@ -55,7 +55,7 @@ export class Term {
   toJSON() {
     return {
       termType: this.termType,
-      value:    this.value,
+      value: this.value,
     };
   }
 }
@@ -102,8 +102,8 @@ export class Literal extends Term {
     const char = dtPos < id.length ? id[dtPos] : '';
     // If "^" it follows, return the remaining substring
     return char === '^' ? id.substr(dtPos + 2) :
-           // If "@" follows, return rdf:langString; xsd:string otherwise
-           (char !== '@' ? xsd.string : rdf.langString);
+      // If "@" follows, return rdf:langString; xsd:string otherwise
+      (char !== '@' ? xsd.string : rdf.langString);
   }
 
   // ### Returns whether this object represents the same term as the other
@@ -114,16 +114,16 @@ export class Literal extends Term {
       return this.id === other.id;
     // Otherwise, compare term type, value, language, and datatype
     return !!other && !!other.datatype &&
-                      this.termType === other.termType &&
-                      this.value    === other.value    &&
-                      this.language === other.language &&
-                      this.datatype.value === other.datatype.value;
+      this.termType === other.termType &&
+      this.value === other.value &&
+      this.language === other.language &&
+      this.datatype.value === other.datatype.value;
   }
 
   toJSON() {
     return {
       termType: this.termType,
-      value:    this.value,
+      value: this.value,
       language: this.language,
       datatype: { termType: 'NamedNode', value: this.datatypeString },
     };
@@ -201,29 +201,29 @@ export function termFromId(id, factory, nested) {
 
   // Identify the term type based on the first character
   switch (id[0]) {
-  case '?':
-    return factory.variable(id.substr(1));
-  case '_':
-    return factory.blankNode(id.substr(2));
-  case '"':
-    // Shortcut for internal literals
-    if (factory === DataFactory)
-      return new Literal(id);
-    // Literal without datatype or language
-    if (id[id.length - 1] === '"')
-      return factory.literal(id.substr(1, id.length - 2));
-    // Literal with datatype or language
-    const endPos = id.lastIndexOf('"', id.length - 1);
-    return factory.literal(id.substr(1, endPos - 1),
-            id[endPos + 1] === '@' ? id.substr(endPos + 2)
-                                   : factory.namedNode(id.substr(endPos + 3)));
-  case '[':
-    id = JSON.parse(id);
-    break;
-  default:
-    if (!nested || !Array.isArray(id)) {
-      return factory.namedNode(id);
-    }
+    case '?':
+      return factory.variable(id.substr(1));
+    case '_':
+      return factory.blankNode(id.substr(2));
+    case '"':
+      // Shortcut for internal literals
+      if (factory === DataFactory)
+        return new Literal(id);
+      // Literal without datatype or language
+      if (id[id.length - 1] === '"')
+        return factory.literal(id.substr(1, id.length - 2));
+      // Literal with datatype or language
+      const endPos = id.lastIndexOf('"', id.length - 1);
+      return factory.literal(id.substr(1, endPos - 1),
+        id[endPos + 1] === '@' ? id.substr(endPos + 2)
+          : factory.namedNode(id.substr(endPos + 3)));
+    case '[':
+      id = JSON.parse(id);
+      break;
+    default:
+      if (!nested || !Array.isArray(id)) {
+        return factory.namedNode(id);
+      }
   }
   return factory.quad(
     termFromId(id[0], factory, true),
@@ -248,24 +248,23 @@ export function termToId(term, nested) {
 
   // Term instantiated with another library
   switch (term.termType) {
-  case 'NamedNode':    return term.value;
-  case 'BlankNode':    return `_:${term.value}`;
-  case 'Variable':     return `?${term.value}`;
-  case 'DefaultGraph': return '';
-  case 'Literal':      return `"${term.value}"${
-    term.language ? `@${term.language}` :
-      (term.datatype && term.datatype.value !== xsd.string ? `^^${term.datatype.value}` : '')}`;
-  case 'Quad':
-    const res = [
-      termToId(term.subject, true),
-      termToId(term.predicate, true),
-      termToId(term.object, true),
-    ];
-    if (!isDefaultGraph(term.graph)) {
-      res.push(termToId(term.graph, true));
-    }
-    return nested ? res : JSON.stringify(res);
-  default: throw new Error(`Unexpected termType: ${term.termType}`);
+    case 'NamedNode': return term.value;
+    case 'BlankNode': return `_:${term.value}`;
+    case 'Variable': return `?${term.value}`;
+    case 'DefaultGraph': return '';
+    case 'Literal': return `"${term.value}"${term.language ? `@${term.language}` :
+        (term.datatype && term.datatype.value !== xsd.string ? `^^${term.datatype.value}` : '')}`;
+    case 'Quad':
+      const res = [
+        termToId(term.subject, true),
+        termToId(term.predicate, true),
+        termToId(term.object, true),
+      ];
+      if (!isDefaultGraph(term.graph)) {
+        res.push(termToId(term.graph, true));
+      }
+      return nested ? res : JSON.stringify(res);
+    default: throw new Error(`Unexpected termType: ${term.termType}`);
   }
 }
 
@@ -274,10 +273,10 @@ export function termToId(term, nested) {
 export class Quad extends Term {
   constructor(subject, predicate, object, graph) {
     super('');
-    this._subject   = subject;
+    this._subject = subject;
     this._predicate = predicate;
-    this._object    = object;
-    this._graph     = graph || DEFAULTGRAPH;
+    this._object = object;
+    this._graph = graph || DEFAULTGRAPH;
   }
 
   // ### The term type of this term
@@ -304,20 +303,20 @@ export class Quad extends Term {
   // ### Returns a plain object representation of this quad
   toJSON() {
     return {
-      termType:  this.termType,
-      subject:   this._subject.toJSON(),
+      termType: this.termType,
+      subject: this._subject.toJSON(),
       predicate: this._predicate.toJSON(),
-      object:    this._object.toJSON(),
-      graph:     this._graph.toJSON(),
+      object: this._object.toJSON(),
+      graph: this._graph.toJSON(),
     };
   }
 
   // ### Returns whether this object represents the same quad as the other
   equals(other) {
-    return !!other && this._subject.equals(other.subject)     &&
-                      this._predicate.equals(other.predicate) &&
-                      this._object.equals(other.object)       &&
-                      this._graph.equals(other.graph);
+    return !!other && this._subject.equals(other.subject) &&
+      this._predicate.equals(other.predicate) &&
+      this._object.equals(other.object) &&
+      this._graph.equals(other.graph);
   }
 }
 export { Quad as Triple };
