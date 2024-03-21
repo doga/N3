@@ -25,7 +25,7 @@ _Tip (requires Deno): To run the following example, type this in your terminal:_
 - `deno run --allow-net --allow-run --allow-env --allow-read https://deno.land/x/mdrb/mod.ts https://raw.githubusercontent.com/doga/N3/main/README.md`.
 
 <details data-mdrb>
-<summary>Create a quad in-memory, and print out its details.</summary>
+<summary>Create an RDF quad in-memory, and print out its details.</summary>
 
 <pre>
 description = '''
@@ -51,7 +51,6 @@ console.info(myQuad.subject.value);         // https://person.example/#me
 console.info(myQuad.object.value);          // Xyz
 console.info(myQuad.object.datatype.value); // http://www.w3.org/1999/02/22-rdf-syntax-ns#langString
 console.info(myQuad.object.language);       // en
-Quad
 ```
 
 Sample output for the code above:
@@ -61,7 +60,6 @@ https://person.example/#me
 Xyz
 http://www.w3.org/1999/02/22-rdf-syntax-ns#langString
 en
-undefined
 ```
 
 ## Forked
