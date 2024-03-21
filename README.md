@@ -20,32 +20,48 @@ It offers:
 
 ## Usage
 
-```shell
-$ deno
-> import * as N3 from 'https://esm.sh/gh/doga/N3@1.17.2/mod.mjs';
-undefined
-> const { DataFactory } = N3;
-const { namedNode, literal, defaultGraph, quad } = DataFactory;
-const myQuad = quad(
-  namedNode('https://person.example/#me'), // Subject
-  namedNode('http://xmlns.com/foaf/0.1/givenName'),    // Predicate
-  literal('Xyz', 'en'),                              // Object
-  defaultGraph(),                                      // Graph
-);
-console.log(myQuad.termType);              // Quad
-console.log(myQuad.value);                 // ''
-console.log(myQuad.subject.value);         // https://person.example/#me
-console.log(myQuad.object.value);          // Xyz
-console.log(myQuad.object.datatype.value); // http://www.w3.org/1999/02/22-rdf-syntax-ns#langString
-console.log(myQuad.object.language);       // en
-Quad
+_Tip (requires Deno): To run the following example, type this in your terminal:_
 
+- `deno run --allow-net --allow-run --allow-env --allow-read https://deno.land/x/mdrb/mod.ts https://raw.githubusercontent.com/doga/N3/main/README.md`.
+
+<details data-mdrb>
+<summary>Create a quad in-memory, and print out its details.</summary>
+
+<pre>
+description = '''
+Running this example is safe, it will not read or write anything to your filesystem.
+'''
+</pre>
+</details>
+
+```javascript
+import * as N3 from 'https://esm.sh/gh/doga/N3@1.17.2/mod.mjs';
+const
+{ DataFactory } = N3,
+{ namedNode, literal, defaultGraph, quad } = DataFactory,
+myQuad = quad(
+  namedNode('https://person.example/#me'),          // Subject
+  namedNode('http://xmlns.com/foaf/0.1/givenName'), // Predicate
+  literal('Xyz', 'en'),                             // Object
+  defaultGraph(),                                   // Graph
+);
+console.info(myQuad.termType);              // Quad
+console.info(myQuad.value);                 // ''
+console.info(myQuad.subject.value);         // https://person.example/#me
+console.info(myQuad.object.value);          // Xyz
+console.info(myQuad.object.datatype.value); // http://www.w3.org/1999/02/22-rdf-syntax-ns#langString
+console.info(myQuad.object.language);       // en
+Quad
+```
+
+Sample output for the code above:
+
+```text
 https://person.example/#me
 Xyz
 http://www.w3.org/1999/02/22-rdf-syntax-ns#langString
 en
 undefined
->
 ```
 
 ## Forked
