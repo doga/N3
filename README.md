@@ -53,9 +53,11 @@ console.info(myQuad.object.datatype.value); // http://www.w3.org/1999/02/22-rdf-
 console.info(myQuad.object.language);       // en
 ```
 
-Sample output for the code above:
+Output for the code above:
 
 ```text
+Quad
+
 https://person.example/#me
 Xyz
 http://www.w3.org/1999/02/22-rdf-syntax-ns#langString
