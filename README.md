@@ -22,7 +22,9 @@ It offers:
 
 _Tip (requires Deno): To run the following example, type this in your terminal:_
 
-- `deno run --allow-net --allow-run --allow-env --allow-read https://deno.land/x/mdrb/mod.ts https://raw.githubusercontent.com/doga/N3/main/README.md`.
+```shell
+deno run --allow-net --allow-run --allow-env --allow-read https://deno.land/x/mdrb/mod.ts https://raw.githubusercontent.com/doga/N3/main/README.md
+```
 
 <details data-mdrb>
 <summary>Create an RDF quad in-memory, and print out its details.</summary>
