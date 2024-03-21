@@ -20,7 +20,7 @@ It offers:
 
 ## Usage
 
-_Tip (requires Deno): To run the following example, type this in your terminal:_
+_Tip (requires Deno): Run the following example by typing this in your terminal:_
 
 ```shell
 deno run --allow-net --allow-run --allow-env --allow-read https://deno.land/x/mdrb/mod.ts https://raw.githubusercontent.com/doga/N3/main/README.md
