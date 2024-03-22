@@ -142,20 +142,21 @@ Running this example is safe, it will not read or write anything to your filesys
 ```javascript
 import * as N3 from 'https://esm.sh/gh/doga/N3@1.17.2/mod.mjs';
 const 
-{Quad, NamedNode} = N3,
+{ DataFactory } = N3,
+{ namedNode, literal, defaultGraph, quad } = DataFactory,
 store = new N3.Store();
 store.add(
-  new Quad(
-    new NamedNode('http://ex.org/Pluto'),
-    new NamedNode('http://ex.org/type'),
-    new NamedNode('http://ex.org/Dog')
+  quad(
+    namedNode('http://ex.org/Pluto'),
+    namedNode('http://ex.org/type'),
+    namedNode('http://ex.org/Dog')
   )
 );
 store.add(
-  new Quad(
-    new NamedNode('http://ex.org/Mickey'),
-    new NamedNode('http://ex.org/type'),
-    new NamedNode('http://ex.org/Mouse')
+  quad(
+    namedNode('http://ex.org/Mickey'),
+    namedNode('http://ex.org/type'),
+    namedNode('http://ex.org/Mouse')
   )
 );
 
@@ -163,7 +164,7 @@ store.add(
 for (const quad of store)
   console.log(quad);
 // Retrieve Mickey's quads
-for (const quad of store.match(new NamedNode('http://ex.org/Mickey'), null, null))
+for (const quad of store.match(namedNode('http://ex.org/Mickey'), null, null))
   console.log(quad);
 ```
 
