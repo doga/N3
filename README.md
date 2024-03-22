@@ -130,7 +130,7 @@ Prefixes used were: {"c":"http://example.org/cartoons#"}
 ```
 
 <details data-mdrb>
-<summary>Store quads in an in-memory RDF store.</summary>
+<summary>Create RDF quads in-memory and store them in an in-memory RDF store.</summary>
 
 <pre>
 description = '''
