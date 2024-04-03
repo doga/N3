@@ -23,7 +23,10 @@ It offers:
 _Tip (requires Deno): Run the following examples by typing this in your terminal:_
 
 ```shell
-deno run --allow-net --allow-run --allow-env --allow-read https://deno.land/x/mdrb/mod.ts https://raw.githubusercontent.com/doga/N3/main/README.md
+deno run \
+  --allow-net --allow-run --allow-env --allow-read \
+  https://deno.land/x/mdrb@2.0.0/mod.ts \
+  https://raw.githubusercontent.com/doga/N3/main/README.md
 ```
 
 <details data-mdrb>
