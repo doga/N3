@@ -1,3 +1,5 @@
+// The entry point for this JavaScript library.
+
 import Lexer from './lib/N3Lexer.mjs'
 import Parser from './lib/N3Parser.mjs'
 import Writer from './lib/N3Writer.mjs'

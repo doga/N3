@@ -40,7 +40,7 @@ Running this example is safe, it will not read or write anything to your filesys
 </details>
 
 ```javascript
-import * as N3 from 'https://esm.sh/gh/doga/N3@1.18.0/mod.mjs';
+import * as N3 from 'https://esm.sh/gh/doga/N3@1.18.1/mod.mjs';
 const
 { DataFactory } = N3,
 { namedNode, literal, defaultGraph, quad } = DataFactory,
@@ -80,7 +80,7 @@ Running this example is safe, it will not read or write anything to your filesys
 </details>
 
 ```javascript
-import * as N3 from 'https://esm.sh/gh/doga/N3@1.18.0/mod.mjs';
+import * as N3 from 'https://esm.sh/gh/doga/N3@1.18.1/mod.mjs';
 const 
 parser = new N3.Parser(),
 document = `
@@ -143,7 +143,7 @@ Running this example is safe, it will not read or write anything to your filesys
 </details>
 
 ```javascript
-import * as N3 from 'https://esm.sh/gh/doga/N3@1.18.0/mod.mjs';
+import * as N3 from 'https://esm.sh/gh/doga/N3@1.18.1/mod.mjs';
 const 
 { DataFactory } = N3,
 { namedNode, literal, defaultGraph, quad } = DataFactory,
